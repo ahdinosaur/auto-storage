@@ -19,8 +19,8 @@ aptitude -y install autofs
 # make autofs configs.
 echo "building autofs configs in ./build"
 mkdir ./build
-mkdir ./build/master.d/
-cat > ./build/master.d/sshfs.master << EOF
+mkdir ./build/auto.master.d/
+cat > ./build/auto.master.d/sshfs.master << EOF
 /media/sshfs /etc/auto.sshfs uid=1000,gid=1000,--timeout=30,--ghost
 EOF
 cat > ./build/auto.sshfs << EOF
@@ -55,4 +55,4 @@ ssh-copy-id "$USER@$HOST"
 
 # symlink in user's directory
 ln -s /media/sshfs/$MOUNTPOINT/ /home/$USER/$MOUNTPOINT
-chown -R $USER:$USER !$
+chown -R $USER:$USER /home/$USER/$MOUNTPOINT
