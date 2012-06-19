@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# make sure we are in the same directory as the script.
+DIR=$( cd "$( dirname "$0" )" && pwd ) 
+cd $DIR
+
+# get configuration
+source ./config
+
+# script must be run as root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+# install autofs.
+aptitude -y install autofs
+
+# make autofs configs.
+echo "building autofs configs in ./build"
+mkdir ./build
+cat > ./build/auto.master << EOF
+/media/sshfs /etc/auto.sshfs uid=1000,gid=1000,--timeout=30,--ghost
+EOF
+cat > ./build/auto.sshfs << EOF
+$MOUNTPOINT -fstype=fuse,rw,nodev,nonempty,allow_other,reconnect,uid=1000 ,gid=1000,max_read=65536,compression=yes,auto_cache,no_check_root, kernel_cache :sshfs\#$USER@$HOST\:$REMOTEDIR
+EOF
+
+# copy built configs to /etc/.
+echo "copying built configs to /etc/"
+mv ./build/* /etc/
+
+# remove build directory
+echo "removing ./build"
+rmdir ./build
+
+# make mount point for sshfs.
+echo "making /media/sshfs"
+mkdir /media/sshfs
+
+# if root doesn't have ssh keys, make one.
+if [ -e "/root/.ssh/id_rsa.pub" ]; then
+  echo "root doesn't have an ssh key, making one."
+  ssh-keygen -t rsa -b 2048 -P "" -f ".ssh/id_rsa"
+fi
+
+# copy root's ssh key to host
+echo "copying root's ssh key to host."
+echo "=== REQUIRING HOST PASSWORD ==="
+ssh-copy-id "$USER@$HOST"
+
+# symlink in user's directory
+mkdir /home/$USER/$MOUNTPOINT
+chown $USER:$USER /home/$USER/$MOUNTPOINT
+ln -s /media/sshfs/$MOUNTPOINT/ /home/$USER/$MOUNTPOINT
+
+# restart autofs
+/etc/init.d/autofs restart
