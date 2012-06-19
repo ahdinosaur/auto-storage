@@ -19,11 +19,12 @@ aptitude -y install autofs
 # make autofs configs.
 echo "building autofs configs in ./build"
 mkdir ./build
-cat > ./build/auto.master << EOF
+mkdir ./build/master.d/
+cat > ./build/master.d/sshfs.master << EOF
 /media/sshfs /etc/auto.sshfs uid=1000,gid=1000,--timeout=30,--ghost
 EOF
 cat > ./build/auto.sshfs << EOF
-$MOUNTPOINT -fstype=fuse,rw,nodev,nonempty,allow_other,reconnect,uid=1000 ,gid=1000,max_read=65536,compression=yes,auto_cache,no_check_root, kernel_cache :sshfs\#$USER@$HOST\:$REMOTEDIR
+$MOUNTPOINT -fstype=fuse,rw,nodev,nonempty,allow_other,reconnect,uid=1000,gid=1000,max_read=65536,compression=yes,auto_cache,no_check_root,kernel_cache :sshfs\#$USER@$HOST\:$REMOTEDIR
 EOF
 
 # copy built configs to /etc/.
@@ -39,9 +40,9 @@ echo "making /media/sshfs"
 mkdir /media/sshfs
 
 # if root doesn't have ssh keys, make one.
-if [ -e "/root/.ssh/id_rsa.pub" ]; then
+if [ ! -e "/root/.ssh/id_rsa.pub" ]; then
   echo "root doesn't have an ssh key, making one."
-  ssh-keygen -t rsa -b 2048 -P "" -f ".ssh/id_rsa"
+  ssh-keygen -t rsa -b 2048 -P "" -f "/root/.ssh/id_rsa"
 fi
 
 # copy root's ssh key to host
@@ -49,10 +50,9 @@ echo "copying root's ssh key to host."
 echo "=== REQUIRING HOST PASSWORD ==="
 ssh-copy-id "$USER@$HOST"
 
-# symlink in user's directory
-mkdir /home/$USER/$MOUNTPOINT
-chown $USER:$USER /home/$USER/$MOUNTPOINT
-ln -s /media/sshfs/$MOUNTPOINT/ /home/$USER/$MOUNTPOINT
-
 # restart autofs
 /etc/init.d/autofs restart
+
+# symlink in user's directory
+ln -s /media/sshfs/$MOUNTPOINT/ /home/$USER/$MOUNTPOINT
+chown -R $USER:$USER !$
