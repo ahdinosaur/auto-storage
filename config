@@ -4,4 +4,3 @@ USER=kaaane
 HOST=192.168.1.200
 MOUNTPOINT=storage
 REMOTEDIR=/storage/kaaane/
-

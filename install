@@ -13,19 +13,8 @@ if [[ $EUID -ne 0 ]]; then
    exit 1
 fi
 
-# install autofs.
-aptitude -y install autofs
-
-# make autofs configs.
-echo "building autofs configs in ./build"
-mkdir ./build
-mkdir ./build/auto.master.d/
-cat > ./build/auto.master.d/sshfs.master << EOF
-/media/sshfs /etc/auto.sshfs uid=1000,gid=1000,--timeout=30,--ghost
-EOF
-cat > ./build/auto.sshfs << EOF
-$MOUNTPOINT -fstype=fuse,rw,nodev,nonempty,allow_other,reconnect,uid=1000,gid=1000,max_read=65536,compression=yes,auto_cache,no_check_root,kernel_cache :sshfs\#$USER@$HOST\:$REMOTEDIR
-EOF
+# install sshfs and autofs.
+aptitude -y install sshfs autofs
 
 # copy built configs to /etc/.
 echo "copying built configs to /etc/"
@@ -37,7 +26,7 @@ rmdir ./build
 
 # make mount point for sshfs.
 echo "making /media/sshfs"
-mkdir /media/sshfs
+mkdir -p /media/sshfs
 
 # if root doesn't have ssh keys, make one.
 if [ ! -e "/root/.ssh/id_rsa.pub" ]; then
@@ -49,6 +38,10 @@ fi
 echo "copying root's ssh key to host."
 echo "=== REQUIRING HOST PASSWORD ==="
 ssh-copy-id "$USER@$HOST"
+
+# hack to make it work
+cat /etc/auto.master.d/sshfs.master >> /etc/auto.master
+rm /etc/auto.master.d/sshfs.master
 
 # restart autofs
 /etc/init.d/autofs restart
