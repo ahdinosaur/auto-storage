@@ -4,6 +4,8 @@
 DIR=$( cd "$( dirname "$0" )" && pwd ) 
 cd $DIR
 
+source ./config
+
 # make autofs configs.
 echo "building autofs configs in ./build"
 mkdir ./build
